@@ -38,6 +38,29 @@ class GitMerge
     end
 
     p "merge order is : #{merge_order.map(&:name).join("->")}"
+    p "input Y for continue or N for input order. Input quit to exit"
+    input = gets
+    input = input.chomp
+    if input == "Y"
+      merge_branch_array(merge_order)
+    elsif input == "N"
+      p "please input merge order split by ','."
+      input = gets
+      a = input.chomp.split(",")
+      _merge_order = []
+      a.each do |branch|
+        _merge_order << Branch.new(branch)
+      end
+      merge_branch_array(_merge_order)
+    elsif input == "quit"
+      puts "gitmerge quit"
+      return 0
+    else
+
+    end
+  end
+
+  def self.merge_branch_array(merge_order)
     p "pull the latest code to local..."
     merge_order.each_with_index do |branch, index|
       current = get_current_branch
@@ -175,4 +198,3 @@ class Branch
   end
 end
 GitMerge.merge(branches)
-
