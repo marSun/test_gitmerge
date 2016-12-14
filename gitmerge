@@ -39,7 +39,7 @@ class GitMerge
 
     p "merge order is : #{merge_order.map(&:name).join("->")}"
     p "pull the latest code to local..."
-    merge_order.each do |branch|
+    merge_order.each_with_index do |branch, index|
       current = get_current_branch
       p "current branch is : #{current}"
       p "will checkout to the branch : #{branch.name}"
@@ -54,6 +54,10 @@ class GitMerge
       pull_code_to_local(current)
       p "finish updating #{branch.name}"
 
+      p "will push branch : #{branch.name} to remote."
+      push_to_remote(branch.name)
+      p "finish pushing #{branch.name} to remote"
+
       puts
 
     end
@@ -64,6 +68,22 @@ class GitMerge
     unless status.success?
       puts stdeerr
       raise "pull #{branch_name} code to local failed."
+    end
+  end
+
+  def self.push_to_remote(branch_name)
+    stdout, stdeerr, status = Open3.capture3("git push origin #{branch_name}")
+    unless status.success?
+      puts stdeerr
+      raise "push #{branch_name} local to remote failed."
+    end
+  end
+
+  def self.git_merge(branch_name)
+    stdout, stdeerr, status = Open3.capture3("git merge #{branch_name}")
+    unless status.success?
+      puts stdeerr
+      raise "#{get_current_branch} merge #{branch_name} failed."
     end
   end
 
