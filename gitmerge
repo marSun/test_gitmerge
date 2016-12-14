@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+require 'open3'
 p "##############################################"
 p "##                                          ##"
 p "##                                          ##"
@@ -20,25 +21,132 @@ branches = [
   "5.3.7.01",
   "5.3.7.02",
 ]
+
+
+class GitMerge
+  def self.merge(branches)
+    branch_instances = branches.map{|b| Branch.new(b)}
+    h = {}
+    branch_instances.each do |ins|
+      h[ins.main_version] ||= []
+      h[ins.main_version] << ins
+    end
+    merge_order = []
+    h.each do |k,v|
+      h[k] = v.sort_by{|e| e.to_i}
+      merge_order << h[k].last
+    end
+
+    p "merge order is : #{merge_order.map(&:name).join("->")}"
+    p "pull the latest code to local..."
+    merge_order.each do |branch|
+      current = get_current_branch
+      p "current branch is : #{current}"
+      p "will checkout to the branch : #{branch.name}"
+
+      checkout_branch(branch.name)
+
+      current = get_current_branch
+
+      p "current branch is : #{current}"
+
+      p "will pull code of #{branch.name} to local."
+      pull_code_to_local(current)
+      p "finish updating #{branch.name}"
+
+      puts
+
+    end
+  end
+
+  def self.pull_code_to_local(branch_name)
+    stdout, stdeerr, status = Open3.capture3("git pull origin #{branch_name}")
+    unless status.success?
+      puts stdeerr
+      raise "pull #{branch_name} code to local failed."
+    end
+  end
+
+  def self.checkout_branch(branch_name)
+    stdout, stdeerr, status = Open3.capture3("git checkout #{branch_name}")
+    unless status.success?
+      puts stdeerr
+      raise "checkout to #{branch_name} failed."
+    end
+  end
+
+  def self.get_current_branch
+    stdout, stdeerr, status = Open3.capture3("git branch")
+    if status.success?
+      current = stdout.split("\n").select{|e| e.include?("*")}.first.split(" ").last
+      return current
+    else
+      puts stdeerr
+      raise "get current branch failed."
+    end
+
+  end
+end
+
 class Branch
-  attr_accessor :name
+  attr_accessor :name, :branch_array, :is_main
   def initialize(name)
     @name = name
+    parse(@name)
   end
 
 
   def parse(input)
-    if input
+    unless input.include?(".")
+      raise "分支名不符合规范"
+    end
 
-
+    branch_array = input.split(".")
+    branch_array.each do |e|
+      if e !~ /[1-9]/
+        raise "分支名不符合规范"
+      end
+    end
+    @branch_array = branch_array
+    if @branch_array.count==3
+      @is_main = true
+    elsif @branch_array.count == 4
+      @is_main = false
+    else
+      raise "仅支持一个小版本号"
     end
   end
 
-  def validate(input)
-    unless input.include?(".")
-
+  def main_version
+    if is_main
+      return branch_array.join
+    else
+      return branch_array[0..2].join
     end
+  end
+
+  def to_i
+    temp = branch_array
+    if is_main
+      temp << "0"
+      temp << "0"
+      temp.join.to_i
+    else
+      temp.join.to_i
+    end
+  end
+
+  def <(branch)
+    self.to_i < branch.to_i
+  end
+
+  def >(branch)
+    self.to_i > branch.to_i
+  end
+
+  def ==(branch)
+    self.to_i == branch.to_i
   end
 end
-
+GitMerge.merge(branches)
 
