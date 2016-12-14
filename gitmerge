@@ -54,6 +54,12 @@ class GitMerge
       pull_code_to_local(current)
       p "finish updating #{branch.name}"
 
+      if index != 0
+        p "will merge branch : #{merge_order[index-1].name}"
+        git_merge(merge_order[index-1].name)
+        p "merge branch : #{merge_order[index-1].name} success."
+      end
+
       p "will push branch : #{branch.name} to remote."
       push_to_remote(branch.name)
       p "finish pushing #{branch.name} to remote"
